@@ -11,13 +11,11 @@ import {
 } from '@nipsysdev/lsd-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
+import { $nodeAddresses, $nodePeerId, $nodeVersion } from '../../node-info/nodeStore';
 import {
   $connectionError,
   $connectionStatus,
   $isConnectionDialogOpened,
-  $nodeAddresses,
-  $nodePeerId,
-  $nodeVersion,
   ConnectionStatus,
 } from '../connectionStore';
 
@@ -38,8 +36,6 @@ export default function StorageConnectionDialog() {
   const isDialogOpened = useStore($isConnectionDialogOpened);
   const connectionStatus = useStore($connectionStatus);
   const connectionError = useStore($connectionError);
-  const nodePeerId = useStore($nodePeerId);
-  const nodeVersion = useStore($nodeVersion);
   const nodeAddresses = useStore($nodeAddresses);
 
   const [peerId, setPeerId] = useState("");
@@ -164,7 +160,7 @@ export default function StorageConnectionDialog() {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Connection status: <span className="capitalize">{connectionStatus}</span>
+            Status: <span className="capitalize">{connectionStatus}</span>
           </DialogTitle>
           <DialogDescription>
             {getStatusDescription(connectionStatus)}
@@ -178,23 +174,6 @@ export default function StorageConnectionDialog() {
 
         {connectionStatus === ConnectionStatus.Connected && (
           <div className="mt-4 space-y-2">
-            {nodeVersion && (
-              <Typography variant="body2">
-                Storage Version: {nodeVersion}
-              </Typography>
-            )}
-            {nodePeerId && (
-              <div className="flex flex-col">
-                <Typography variant="body2">
-                Peer ID:
-              </Typography>
-                <Typography variant="body2" style={{"overflowWrap": "anywhere"}}>
-                {nodePeerId}
-              </Typography>
-
-                </div>
-            )}
-
             {/* Show user's node addresses */}
             {nodeAddresses.length > 0 && (
               <div className="flex flex-col mt-2">
@@ -297,23 +276,20 @@ export default function StorageConnectionDialog() {
         )}
 
         <div className="mt-6 flex justify-end space-x-2">
-          <button
-              type="button"
+          {![ConnectionStatus.Disconnected, ConnectionStatus.Error].includes(connectionStatus) && <Button
+              variant="outlined"
               onClick={disconnectFromStorage}
-              className="px-4 py-2 bg-lsd-surface-secondary hover:bg-lsd-surface-tertiary rounded-md transition-colors"
             >
-              Disconnect
-            </button>
+              {connectionStatus === ConnectionStatus.Connecting ? 'Abort' : 'Disconnect'}
+          </Button>}
           
-          {(connectionStatus === ConnectionStatus.Disconnected ||
-            connectionStatus === ConnectionStatus.Error) && (
-            <button
-              type="button"
+          {[ConnectionStatus.Disconnected, ConnectionStatus.Error].includes(connectionStatus) && (
+            <Button
+              variant="outlined"
               onClick={connectToStorage}
-              className="px-4 py-2 bg-lsd-primary hover:bg-lsd-primary-hover text-white rounded-md transition-colors"
             >
               Connect
-            </button>
+            </Button>
           )}
         </div>
       </DialogContent>

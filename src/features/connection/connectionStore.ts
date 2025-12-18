@@ -10,6 +10,3 @@ export enum ConnectionStatus {
 export const $isConnectionDialogOpened = atom(false);
 export const $connectionStatus = atom<ConnectionStatus>(ConnectionStatus.Disconnected);
 export const $connectionError = atom<string | null>(null);
-export const $nodePeerId = atom<string | null>(null);
-export const $nodeVersion = atom<string | null>(null);
-export const $nodeAddresses = atom<string[]>([]);
