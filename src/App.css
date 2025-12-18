@@ -9,10 +9,6 @@ body,
   overflow: hidden;
 }
 
-.container {
-  max-width: 800px;
-}
-
 :root {
   color-scheme: dark;
 }

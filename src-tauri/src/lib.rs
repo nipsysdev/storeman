@@ -1,5 +1,5 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod codex;
+mod features;
 
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
@@ -16,24 +16,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            // Configure filesystem scope for Codex data directory
             let fs = app.fs_scope();
 
-            // Allow access to app data directories for Codex storage
             if let Ok(app_data_dir) = app.path().app_data_dir() {
-                let codex_dir = app_data_dir.join("codex_data");
-                fs.allow_directory(&codex_dir, true)
-                    .expect("Failed to allow codex data directory");
-                println!("Allowed Codex data directory: {}", codex_dir.display());
+                let storage_dir = app_data_dir.join("storage_data");
+                fs.allow_directory(&storage_dir, true)
+                    .expect("Failed to allow Storage data directory");
+                println!("Allowed Storage data directory: {}", storage_dir.display());
             }
 
             if let Ok(app_local_data_dir) = app.path().app_local_data_dir() {
-                let codex_local_dir = app_local_data_dir.join("codex_data");
-                fs.allow_directory(&codex_local_dir, true)
-                    .expect("Failed to allow codex local data directory");
+                let storage_local_dir = app_local_data_dir.join("storage_data");
+                fs.allow_directory(&storage_local_dir, true)
+                    .expect("Failed to allow Storage local data directory");
                 println!(
-                    "Allowed Codex local data directory: {}",
-                    codex_local_dir.display()
+                    "Allowed Storage local data directory: {}",
+                    storage_local_dir.display()
                 );
             }
 
@@ -41,18 +39,18 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            codex::get_codex_status,
-            codex::get_codex_error,
-            codex::get_network_info,
-            codex::get_storage_info,
-            codex::connect_to_codex,
-            codex::disconnect_from_codex,
-            codex::get_codex_peer_id,
-            codex::get_codex_version,
-            codex::upload_file_to_codex,
-            codex::download_file_from_codex,
-            codex::connect_to_peer,
-            codex::get_node_addresses
+            features::connection::get_storage_status,
+            features::connection::get_storage_error,
+            features::connection::get_network_info,
+            features::connection::get_storage_info,
+            features::connection::connect_to_storage,
+            features::connection::disconnect_from_storage,
+            features::connection::get_storage_peer_id,
+            features::connection::get_storage_version,
+            features::upload::upload_file_to_storage,
+            features::download::download_file_from_storage,
+            features::connection::connect_to_peer,
+            features::connection::get_node_addresses
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

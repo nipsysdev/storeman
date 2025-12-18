@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -11,39 +12,40 @@ import {
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
 import {
-  $codexError,
-  $codexPeerId,
-  $codexStatus,
-  $codexVersion,
-  $isCodexDialogOpened,
+  $connectionError,
+  $connectionStatus,
+  $isConnectionDialogOpened,
   $nodeAddresses,
-  CodexConnectionStatus,
-} from '../stores/codexStore';
+  $nodePeerId,
+  $nodeVersion,
+  ConnectionStatus,
+} from '../connectionStore';
 
-const connectToCodex = async () => {
+const connectToStorage = async () => {
   try {
-    $codexStatus.set(CodexConnectionStatus.Connecting);
-    $codexError.set(null);
-    await invoke('connect_to_codex');
+    $connectionStatus.set(ConnectionStatus.Connecting);
+    $connectionError.set(null);
+    await invoke('connect_to_storage');
     // Status will be updated by the polling effect
   } catch (error) {
-    console.error('Failed to connect to Codex:', error);
-    $codexError.set(error as string);
-    $codexStatus.set(CodexConnectionStatus.Error);
+    console.error('Failed to connect to Storage:', error);
+    $connectionError.set(error as string);
+    $connectionStatus.set(ConnectionStatus.Error);
   }
 };
 
-export default function CodexConnectionDialog() {
-  const isDialogOpened = useStore($isCodexDialogOpened);
-  const codexStatus = useStore($codexStatus);
-  const codexError = useStore($codexError);
-  const codexPeerId = useStore($codexPeerId);
-  const codexVersion = useStore($codexVersion);
+export default function StorageConnectionDialog() {
+  const isDialogOpened = useStore($isConnectionDialogOpened);
+  const connectionStatus = useStore($connectionStatus);
+  const connectionError = useStore($connectionError);
+  const nodePeerId = useStore($nodePeerId);
+  const nodeVersion = useStore($nodeVersion);
   const nodeAddresses = useStore($nodeAddresses);
 
   const [peerId, setPeerId] = useState("");
   const [addresses, setAddresses] = useState([""]);
   const [showPeerConnect, setShowPeerConnect] = useState(false);
+  const [connectionRequested, setConnectionRequested] =useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleConnectToPeer = async () => {
@@ -80,28 +82,29 @@ export default function CodexConnectionDialog() {
     if (isDialogOpened) {
       // Only attempt to connect if currently disconnected
       // This prevents trying to create a new node when one already exists
-      if (codexStatus === CodexConnectionStatus.Disconnected) {
-        connectToCodex();
+      if (connectionStatus === ConnectionStatus.Disconnected && !connectionRequested) {
+        setConnectionRequested(true)
+        connectToStorage();
       }
     }
-  }, [isDialogOpened, codexStatus]);
+  }, [isDialogOpened, connectionRequested, connectionStatus]);
 
   useEffect(() => {
     // Update status immediately when dialog opens to ensure fresh data
     // The main App component handles the regular polling
     const updateStatusOnce = async () => {
       try {
-        const status = await invoke<CodexConnectionStatus>('get_codex_status');
-        $codexStatus.set(status);
+        const status = await invoke<ConnectionStatus>('get_storage_status');
+        $connectionStatus.set(status);
         
-        const error = await invoke<string | null>('get_codex_error');
-        $codexError.set(error);
+        const error = await invoke<string | null>('get_storage_error');
+        $connectionError.set(error);
         
-        const peerId = await invoke<string | null>('get_codex_peer_id');
-        $codexPeerId.set(peerId);
+        const peerId = await invoke<string | null>('get_storage_peer_id');
+        $nodePeerId.set(peerId);
         
-        const version = await invoke<string | null>('get_codex_version');
-        $codexVersion.set(version);
+        const version = await invoke<string | null>('get_storage_version');
+        $nodeVersion.set(version);
 
         // Also update node addresses
         try {
@@ -112,7 +115,7 @@ export default function CodexConnectionDialog() {
           console.warn("Failed to get node addresses:", addrError);
         }
       } catch (error) {
-        console.error('Failed to update Codex status:', error);
+        console.error('Failed to update Storage status:', error);
       }
     };
 
@@ -122,29 +125,29 @@ export default function CodexConnectionDialog() {
     }
   }, [isDialogOpened]);
 
-  const disconnectFromCodex = async () => {
+  const disconnectFromStorage = async () => {
     try {
-      await invoke('disconnect_from_codex');
-      $codexStatus.set(CodexConnectionStatus.Disconnected);
-      $codexError.set(null);
-      $codexPeerId.set(null);
-      $codexVersion.set(null);
+      await invoke('disconnect_from_storage');
+      $connectionStatus.set(ConnectionStatus.Disconnected);
+      $connectionError.set(null);
+      $nodePeerId.set(null);
+      $nodeVersion.set(null);
     } catch (error) {
-      console.error('Failed to disconnect from Codex:', error);
-      $codexError.set(error as string);
+      console.error('Failed to disconnect from Storage:', error);
+      $connectionError.set(error as string);
     }
   };
 
-  const getStatusDescription = (status: CodexConnectionStatus) => {
+  const getStatusDescription = (status: ConnectionStatus) => {
     switch (status) {
-      case CodexConnectionStatus.Connecting:
-        return 'Connecting to Codex network...';
-      case CodexConnectionStatus.Connected:
-        return 'Connected to Codex successfully';
-      case CodexConnectionStatus.Error:
-        return codexError || 'An error occurred while connecting to Codex';
-      case CodexConnectionStatus.Disconnected:
-        return 'Disconnected from Codex network';
+      case ConnectionStatus.Connecting:
+        return 'Connecting to Storage network...';
+      case ConnectionStatus.Connected:
+        return 'Connected to Storage successfully';
+      case ConnectionStatus.Error:
+        return connectionError || 'An error occurred while connecting to Storage';
+      case ConnectionStatus.Disconnected:
+        return 'Disconnected from Storage network';
       default:
         return '';
     }
@@ -155,38 +158,38 @@ export default function CodexConnectionDialog() {
     <Dialog
       open={isDialogOpened}
       onOpenChange={(open) => {
-        $isCodexDialogOpened.set(open);
+        $isConnectionDialogOpened.set(open);
       }}
     >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Codex Status: <span className="capitalize">{codexStatus}</span>
+            Connection status: <span className="capitalize">{connectionStatus}</span>
           </DialogTitle>
           <DialogDescription>
-            {getStatusDescription(codexStatus)}
+            {getStatusDescription(connectionStatus)}
           </DialogDescription>
         </DialogHeader>
 
         <Progress
-          indeterminate={codexStatus === CodexConnectionStatus.Connecting}
-          value={codexStatus === CodexConnectionStatus.Connected ? 100 : undefined}
+          indeterminate={connectionStatus === ConnectionStatus.Connecting}
+          value={connectionStatus === ConnectionStatus.Connected ? 100 : undefined}
         />
 
-        {codexStatus === CodexConnectionStatus.Connected && (
+        {connectionStatus === ConnectionStatus.Connected && (
           <div className="mt-4 space-y-2">
-            {codexVersion && (
+            {nodeVersion && (
               <Typography variant="body2">
-                Codex Version: {codexVersion}
+                Storage Version: {nodeVersion}
               </Typography>
             )}
-            {codexPeerId && (
+            {nodePeerId && (
               <div className="flex flex-col">
                 <Typography variant="body2">
                 Peer ID:
               </Typography>
                 <Typography variant="body2" style={{"overflowWrap": "anywhere"}}>
-                {codexPeerId}
+                {nodePeerId}
               </Typography>
 
                 </div>
@@ -236,7 +239,7 @@ export default function CodexConnectionDialog() {
                 <div>
                   <div className="block text-sm font-medium mb-1">Addresses:</div>
                   {addresses.map((addr, index) => (
-                    <div key={`addr-${index}-${addr.slice(0, 8)}`} className="flex space-x-2 mb-2">
+                    <div key={`addr-${index}-${addr.slice(0, 8)}`} className="flex space-x-2 mb-2 items-center">
                       <input
                         type="text"
                         value={addr}
@@ -245,23 +248,24 @@ export default function CodexConnectionDialog() {
                         className="flex-1 px-3 py-2 border border-lsd-border rounded-md bg-lsd-surface-primary"
                       />
                       {addresses.length > 1 && (
-                        <button
-                          type="button"
+                        <Button
+                          size="sm"
+                          variant="outlined"
                           onClick={() => handleRemoveAddress(index)}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm"
                         >
                           Remove
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
+
+                  <Button
                     onClick={handleAddAddress}
-                    className="px-3 py-1 bg-lsd-surface-tertiary hover:bg-lsd-surface-secondary rounded-md text-sm transition-colors"
+                    size="sm"
+                    variant="outlined"
                   >
                     Add Address
-                  </button>
+                  </Button>
                 </div>
 
                 {error && (
@@ -271,57 +275,46 @@ export default function CodexConnectionDialog() {
                 )}
 
                 <div className="flex space-x-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="outlined"
                     onClick={handleConnectToPeer}
                     disabled={!peerId.trim() || !addresses.some((a) => a.trim())}
-                    className="px-4 py-2 bg-lsd-primary hover:bg-lsd-primary-hover text-white rounded-md transition-colors disabled:opacity-50"
                   >
                     Connect to Peer
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {codexStatus === CodexConnectionStatus.Error && (
+        {connectionStatus === ConnectionStatus.Error && (
           <div className="mt-4">
             <Typography variant="body2" color="secondary">
-              {codexError}
+              {connectionError}
             </Typography>
           </div>
         )}
 
         <div className="mt-6 flex justify-end space-x-2">
-          {codexStatus === CodexConnectionStatus.Connected && (
-            <button
+          <button
               type="button"
-              onClick={disconnectFromCodex}
+              onClick={disconnectFromStorage}
               className="px-4 py-2 bg-lsd-surface-secondary hover:bg-lsd-surface-tertiary rounded-md transition-colors"
             >
               Disconnect
             </button>
-          )}
           
-          {(codexStatus === CodexConnectionStatus.Disconnected ||
-            codexStatus === CodexConnectionStatus.Error) && (
+          {(connectionStatus === ConnectionStatus.Disconnected ||
+            connectionStatus === ConnectionStatus.Error) && (
             <button
               type="button"
-              onClick={connectToCodex}
+              onClick={connectToStorage}
               className="px-4 py-2 bg-lsd-primary hover:bg-lsd-primary-hover text-white rounded-md transition-colors"
             >
               Connect
             </button>
           )}
-          
-          <button
-            type="button"
-            onClick={() => $isCodexDialogOpened.set(false)}
-            className="px-4 py-2 bg-lsd-surface-secondary hover:bg-lsd-surface-tertiary rounded-md transition-colors"
-          >
-            Close
-          </button>
         </div>
       </DialogContent>
     </Dialog>

@@ -2,45 +2,45 @@ import { useStore } from '@nanostores/react';
 import { Tabs, TabsContent, TabsList, TabsTrigger, Typography } from '@nipsysdev/lsd-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect } from 'react';
-import CodexConnectionDialog from './components/CodexConnectionDialog';
-import DownloadTab from './components/DownloadTab';
-import UploadTab from './components/UploadTab';
+import StorageConnectionDialog from './features/connection/components/ConnectionDialog';
 import {
-  $codexError,
-  $codexPeerId,
-  $codexStatus,
-  $codexVersion,
-  $isCodexDialogOpened,
+  $connectionError,
+  $connectionStatus,
+  $isConnectionDialogOpened,
   $nodeAddresses,
-  CodexConnectionStatus,
-} from './stores/codexStore';
+  $nodePeerId,
+  $nodeVersion,
+  ConnectionStatus,
+} from './features/connection/connectionStore';
+import DownloadTab from './features/download/components/DownloadTab';
+import UploadTab from './features/upload/components/UploadTab';
 import './App.css';
 
 function App() {
-  const codexStatus = useStore($codexStatus);
-  const codexPeerId = useStore($codexPeerId);
-  const codexVersion = useStore($codexVersion);
-  const codexError = useStore($codexError);
-  const isDialogOpened = useStore($isCodexDialogOpened);
+  const connectionStatus = useStore($connectionStatus);
+  const nodePeerId = useStore($nodePeerId);
+  const nodeVersion = useStore($nodeVersion);
+  const connectionError = useStore($connectionError);
 
   useEffect(() => {
     // Show connection dialog immediately on app load
-    $isCodexDialogOpened.set(true);
+    $isConnectionDialogOpened.set(true);
     
     // Update status from backend on mount
     const updateStatus = async () => {
+      console.log('test')
       try {
-        const status = await invoke<CodexConnectionStatus>('get_codex_status');
-        $codexStatus.set(status);
+        const status = await invoke<ConnectionStatus>('get_storage_status');
+        $connectionStatus.set(status);
         
-        const error = await invoke<string | null>('get_codex_error');
-        $codexError.set(error);
+        const error = await invoke<string | null>('get_storage_error');
+        $connectionError.set(error);
         
-        const peerId = await invoke<string | null>('get_codex_peer_id');
-        $codexPeerId.set(peerId);
+        const peerId = await invoke<string | null>('get_storage_peer_id');
+        $nodePeerId.set(peerId);
         
-        const version = await invoke<string | null>('get_codex_version');
-        $codexVersion.set(version);
+        const version = await invoke<string | null>('get_storage_version');
+        $nodeVersion.set(version);
 
         // Also update node addresses
         try {
@@ -51,7 +51,7 @@ function App() {
           console.warn("Failed to get node addresses:", addrError);
         }
       } catch (error) {
-        console.error('Failed to update Codex status:', error);
+        console.error('Failed to update Storage status:', error);
       }
     };
 
@@ -61,87 +61,79 @@ function App() {
   }, []);
 
   const getStatusText = () => {
-    switch (codexStatus) {
-      case CodexConnectionStatus.Connected:
+    switch (connectionStatus) {
+      case ConnectionStatus.Connected:
         return 'Connected';
-      case CodexConnectionStatus.Connecting:
+      case ConnectionStatus.Connecting:
         return 'Connecting...';
-      case CodexConnectionStatus.Error:
+      case ConnectionStatus.Error:
         return 'Error';
-      case CodexConnectionStatus.Disconnected:
+      case ConnectionStatus.Disconnected:
       default:
         return 'Disconnected';
     }
   };
 
   const getStatusColor = () => {
-    switch (codexStatus) {
-      case CodexConnectionStatus.Connected:
+    switch (connectionStatus) {
+      case ConnectionStatus.Connected:
         return 'primary';
-      case CodexConnectionStatus.Connecting:
+      case ConnectionStatus.Connecting:
         return 'secondary';
-      case CodexConnectionStatus.Error:
+      case ConnectionStatus.Error:
         return 'secondary';
-      case CodexConnectionStatus.Disconnected:
+      case ConnectionStatus.Disconnected:
       default:
         return 'secondary';
     }
   };
 
   const openConnectionDialog = () => {
-    $isCodexDialogOpened.set(true);
+    $isConnectionDialogOpened.set(true);
   };
 
   return (
-    <div className="size-full bg-lsd-surface-primary pt-[env(safe-area-inset-top)]">
-      <header className="flex p-6 border-b border-lsd-border justify-between items-center">
+    <div className="size-full flex flex-col bg-lsd-surface-primary pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <header className="flex p-6 justify-between items-center">
         <Typography variant="h3">
-          Dextools
+          λ | StoreMan
         </Typography>
         <div className="flex items-center space-x-4">
           <Typography
             variant="subtitle1"
             color={getStatusColor() as any}
-            className="cursor-pointer hover:opacity-80"
+            className="cursor-pointer font-bold hover:opacity-80"
             onClick={openConnectionDialog}
-            title={codexError || `Peer ID: ${codexPeerId || 'N/A'}\nVersion: ${codexVersion || 'N/A'}`}
+            title={connectionError || `Peer ID: ${nodePeerId || 'N/A'}\nVersion: ${nodeVersion || 'N/A'}`}
           >
             {getStatusText()}
           </Typography>
-          {codexStatus === CodexConnectionStatus.Disconnected && (
-            <button
-              type="button"
-              onClick={openConnectionDialog}
-              className="px-3 py-1 bg-lsd-primary hover:bg-lsd-primary-hover text-white rounded-md text-sm transition-colors"
-            >
-              Connect
-            </button>
-          )}
         </div>
       </header>
       
-      <main className={`container mx-auto p-6 ${isDialogOpened ? 'blur-sm' : ''}`}>
-        <Tabs defaultValue="upload" className="w-full max-w-md mx-auto">
+      <Tabs defaultValue="upload" className="flex-auto flex flex-col px-0.5" >
           <TabsList fullWidth>
-            <TabsTrigger value="upload" fullWidth>
+            <TabsTrigger value="upload">
               Upload
             </TabsTrigger>
-            <TabsTrigger value="download" fullWidth>
+            <TabsTrigger value="download">
               Download
+            </TabsTrigger>
+            <TabsTrigger value="network">
+              Network
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="upload" className="mt-6">
+          <TabsContent value="upload" className="flex-auto mt-0 mb-0">
             <UploadTab />
           </TabsContent>
           
-          <TabsContent value="download" className="mt-6">
+          <TabsContent value="download" className="mt-0">
             <DownloadTab />
           </TabsContent>
         </Tabs>
-      </main>
 
-      <CodexConnectionDialog />
+      <StorageConnectionDialog />
     </div>
   );
 }

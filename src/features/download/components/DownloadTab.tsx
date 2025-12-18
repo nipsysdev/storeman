@@ -69,7 +69,7 @@ export default function DownloadTab() {
         });
       }, 200);
 
-      const result = await invoke<DownloadResult>('download_file_from_codex', {
+      const result = await invoke<DownloadResult>('download_file_from_storage', {
         cid: cid,
         savePath: savePath
       });
@@ -86,9 +86,9 @@ export default function DownloadTab() {
   };
 
   return (
-    <Card className="w-full max-w-md" style={{borderTop: 0}}>
-      <CardHeader>
-        <CardTitle>Download File from Codex</CardTitle>
+    <Card className="size-full border-0!">
+      <CardHeader className="border-x">
+        <CardTitle>Download File from Storage</CardTitle>
         <CardDescription>
           Enter the CID of the file you want to download
         </CardDescription>
@@ -106,7 +106,7 @@ export default function DownloadTab() {
         {isDownloading && (
           <div className="space-y-2">
             <Typography variant="body2">
-              Downloading from Codex...
+              Downloading from Storage...
             </Typography>
             <Progress value={downloadProgress} />
           </div>

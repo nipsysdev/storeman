@@ -1,4 +1,4 @@
-package dev.nipsys.dextools
+package dev.nipsys.storeman
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge

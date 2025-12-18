@@ -69,7 +69,7 @@ export default function UploadTab() {
       }, 200);
 
       try {
-        const result = await invoke<UploadResult>('upload_file_to_codex', {
+        const result = await invoke<UploadResult>('upload_file_to_storage', {
           filePath: selectedFilePath
         });
         
@@ -89,11 +89,11 @@ export default function UploadTab() {
   };
 
   return (
-    <Card className="w-full max-w-md" style={{borderTop: 0}}>
-      <CardHeader>
-        <CardTitle>Upload File to Codex</CardTitle>
+    <Card className="size-full border-0!">
+      <CardHeader className="border-x">
+        <CardTitle>Upload File to Storage</CardTitle>
         <CardDescription>
-          Select a file to upload to the Codex network
+          Select a file to upload to the Storage network
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -122,7 +122,7 @@ export default function UploadTab() {
         {isUploading && (
           <div className="space-y-2">
             <Typography variant="body2">
-              Uploading to Codex...
+              Uploading to Storage...
             </Typography>
             <Progress value={uploadProgress} />
           </div>

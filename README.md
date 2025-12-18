@@ -1,6 +1,6 @@
-# Dextools - DevTools for Codex
+# StoreMan - A simple Logos Storage GUI node
 
-Dextools is a simple Tauri desktop application for uploading and downloading files from Codex.
+StoreMan is a Desktop & Android app for connecting, uploading and downloading files from Logos Storage.
 
 ## Getting Started
 
