@@ -3,13 +3,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, OnceCell, RwLock};
 
-use crate::features::shared::{NetworkInfo, StorageConnectionStatus, StorageError, StorageInfo};
+use crate::features::shared::{NodeInfo, StorageConnectionStatus, StorageError};
 
 pub struct StorageManager {
     node: Arc<Mutex<Option<CodexNode>>>,
     config: crate::features::connection::StoreManConfig,
     status: Arc<RwLock<StorageConnectionStatus>>,
-    error: Arc<RwLock<Option<String>>>,
     progress_senders: Arc<
         Mutex<
             HashMap<
@@ -18,8 +17,6 @@ pub struct StorageManager {
             >,
         >,
     >,
-    network_info: Arc<RwLock<NetworkInfo>>,
-    storage_info: Arc<RwLock<StorageInfo>>,
 }
 
 impl StorageManager {
@@ -30,21 +27,7 @@ impl StorageManager {
             node: Arc::new(Mutex::new(None)),
             config,
             status: Arc::new(RwLock::new(StorageConnectionStatus::Disconnected)),
-            error: Arc::new(RwLock::new(None)),
             progress_senders: Arc::new(Mutex::new(HashMap::new())),
-            network_info: Arc::new(RwLock::new(NetworkInfo {
-                peer_id: None,
-                version: None,
-                repo_path: None,
-                connected_peers: 0,
-                max_peers: 50,
-            })),
-            storage_info: Arc::new(RwLock::new(StorageInfo {
-                used_bytes: 0,
-                total_bytes: 1024 * 1024 * 1024,
-                available_bytes: 1024 * 1024 * 1024,
-                block_count: 0,
-            })),
         };
 
         manager.initialize_node().await?;
@@ -60,12 +43,6 @@ impl StorageManager {
         {
             let mut status = self.status.write().await;
             *status = StorageConnectionStatus::Connecting;
-        }
-
-        // Clear any previous errors
-        {
-            let mut error = self.error.write().await;
-            *error = None;
         }
 
         {
@@ -106,11 +83,6 @@ impl StorageManager {
             *status = StorageConnectionStatus::Connecting;
         }
 
-        {
-            let mut error = self.error.write().await;
-            *error = None;
-        }
-
         let mut node = {
             let mut node_guard = self.node.lock().await;
             match node_guard.take() {
@@ -146,9 +118,6 @@ impl StorageManager {
             *status = StorageConnectionStatus::Connected;
         }
 
-        // Update network info
-        self.update_network_info().await?;
-
         Ok(())
     }
 
@@ -175,21 +144,8 @@ impl StorageManager {
         }
 
         {
-            let mut network_info = self.network_info.write().await;
-            network_info.peer_id = None;
-            network_info.version = None;
-            network_info.repo_path = None;
-            network_info.connected_peers = 0;
-        }
-
-        {
             let mut status = self.status.write().await;
             *status = StorageConnectionStatus::Initialized;
-        }
-
-        {
-            let mut error = self.error.write().await;
-            *error = None;
         }
 
         Ok(())
@@ -197,18 +153,6 @@ impl StorageManager {
 
     pub async fn get_status(&self) -> StorageConnectionStatus {
         self.status.read().await.clone()
-    }
-
-    pub async fn get_error(&self) -> Option<String> {
-        self.error.read().await.clone()
-    }
-
-    pub async fn get_network_info(&self) -> NetworkInfo {
-        self.network_info.read().await.clone()
-    }
-
-    pub async fn get_storage_info(&self) -> StorageInfo {
-        self.storage_info.read().await.clone()
     }
 
     pub async fn connect_to_peer(
@@ -236,8 +180,7 @@ impl StorageManager {
         Ok(())
     }
 
-    pub async fn get_node_addresses(&self) -> Result<Vec<String>, StorageError> {
-        // Get the node (existing pattern)
+    pub async fn get_node_info(&self) -> Result<NodeInfo, StorageError> {
         let node = {
             let node_guard = self.node.lock().await;
             node_guard
@@ -246,34 +189,26 @@ impl StorageManager {
                 .clone()
         };
 
-        if !node.is_started() {
-            return Err(StorageError::NodeNotStarted);
+        let peer_id = node.peer_id().ok();
+        let version = node.version().ok();
+        let repo_path = node.repo().ok();
+        let mut debug_info = Option::None;
+
+        if node.is_started() {
+            match debug(&node).await {
+                Ok(info) => debug_info = Some(info),
+                Err(e) => {
+                    return Err(StorageError::Configuration(e.to_string()));
+                }
+            }
         }
 
-        let debug_info = debug(&node)
-            .await
-            .map_err(|e| StorageError::Configuration(e.to_string()))?;
-        Ok(debug_info.addrs)
-    }
-
-    async fn update_network_info(&self) -> Result<(), StorageError> {
-        let node = {
-            let node_guard = self.node.lock().await;
-            node_guard
-                .as_ref()
-                .ok_or_else(|| StorageError::NodeNotInitialized)?
-                .clone()
-        };
-
-        let mut network_info = self.network_info.write().await;
-
-        network_info.peer_id = node.peer_id().ok();
-        network_info.version = node.version().ok();
-        network_info.repo_path = node.repo().ok();
-        network_info.max_peers = self.config.max_peers;
-        // TODO: Get actual connected peers count when available in bindings
-
-        Ok(())
+        Ok(NodeInfo {
+            peer_id,
+            version,
+            repo_path,
+            debug_info,
+        })
     }
 
     // Helper methods for upload/download features
@@ -320,10 +255,7 @@ impl Clone for StorageManager {
             node: Arc::clone(&self.node),
             config: self.config.clone(),
             status: Arc::clone(&self.status),
-            error: Arc::clone(&self.error),
             progress_senders: Arc::clone(&self.progress_senders),
-            network_info: Arc::clone(&self.network_info),
-            storage_info: Arc::clone(&self.storage_info),
         }
     }
 }

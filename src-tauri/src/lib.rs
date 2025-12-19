@@ -1,13 +1,7 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 mod features;
 
 use tauri::Manager;
 use tauri_plugin_fs::FsExt;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -49,19 +43,13 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
-            features::connection::get_storage_status,
-            features::connection::get_storage_error,
-            features::connection::get_network_info,
-            features::connection::get_storage_info,
-            features::connection::get_storage_peer_id,
-            features::connection::get_storage_version,
+            features::connection::get_node_status,
             features::upload::upload_file_to_storage,
             features::download::download_file_from_storage,
             features::connection::connect_to_peer,
-            features::connection::get_node_addresses,
-            features::connection::start_storage_node,
-            features::connection::stop_storage_node
+            features::connection::get_node_info,
+            features::connection::start_node,
+            features::connection::stop_node
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

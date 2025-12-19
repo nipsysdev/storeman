@@ -6,11 +6,9 @@ import {
 	TabsTrigger,
 	Typography,
 } from "@nipsysdev/lsd-react";
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 import StorageConnectionDialog from "./features/connection/components/ConnectionDialog";
 import {
-	$connectionError,
 	$connectionStatus,
 	$isConnectionDialogOpened,
 	ConnectionStatus,
@@ -18,54 +16,39 @@ import {
 import DownloadTab from "./features/download/components/DownloadTab";
 import UploadTab from "./features/upload/components/UploadTab";
 import "./App.css";
+import { connectToStorage } from "./features/connection/connectionService";
 import { getConnectionStatusText } from "./features/connection/connectionUtils";
 import NodeTab from "./features/node-info/components/NodeTab";
 import {
-	$nodeAddresses,
-	$nodePeerId,
-	$nodeVersion,
-} from "./features/node-info/nodeStore";
+	updateNodeInfo,
+	updateNodeStatus,
+} from "./features/node-info/nodeService";
 
 function App() {
 	const connectionStatus = useStore($connectionStatus);
-	const nodePeerId = useStore($nodePeerId);
-	const nodeVersion = useStore($nodeVersion);
-	const connectionError = useStore($connectionError);
 
 	useEffect(() => {
-		// Show connection dialog immediately on app load
-		$isConnectionDialogOpened.set(true);
+		updateNodeStatus().then((status) => {
+			if (
+				status === ConnectionStatus.Disconnected ||
+				status === ConnectionStatus.Initialized
+			) {
+				connectToStorage();
+				$isConnectionDialogOpened.set(true);
+			}
+		});
 
-		// Update status from backend on mount
-		const updateStatus = async () => {
+		const nodePolling = async () => {
 			try {
-				const status = await invoke<ConnectionStatus>("get_storage_status");
-				$connectionStatus.set(status);
-
-				const error = await invoke<string | null>("get_storage_error");
-				$connectionError.set(error);
-
-				const peerId = await invoke<string | null>("get_storage_peer_id");
-				$nodePeerId.set(peerId);
-
-				const version = await invoke<string | null>("get_storage_version");
-				$nodeVersion.set(version);
-
-				// Also update node addresses
-				try {
-					const addresses = await invoke<string[]>("get_node_addresses");
-					$nodeAddresses.set(addresses);
-				} catch (addrError) {
-					// Don't fail the whole status update if addresses fail
-					console.warn("Failed to get node addresses:", addrError);
-				}
+				await updateNodeStatus();
+				await updateNodeInfo();
 			} catch (error) {
 				console.error("Failed to update Storage status:", error);
 			}
 		};
 
-		updateStatus();
-		const interval = setInterval(updateStatus, 2000);
+		nodePolling();
+		const interval = setInterval(nodePolling, 500);
 		return () => clearInterval(interval);
 	}, []);
 
@@ -92,10 +75,6 @@ function App() {
 						color={getStatusColor()}
 						className="cursor-pointer font-bold hover:opacity-80"
 						onClick={openConnectionDialog}
-						title={
-							connectionError ||
-							`Peer ID: ${nodePeerId || "N/A"}\nVersion: ${nodeVersion || "N/A"}`
-						}
 					>
 						{getConnectionStatusText(connectionStatus)}
 					</Typography>
@@ -104,10 +83,15 @@ function App() {
 
 			<Tabs defaultValue="upload" className="flex-auto flex flex-col px-0.5">
 				<TabsList fullWidth>
-					<TabsTrigger value="upload">Upload</TabsTrigger>
-					<TabsTrigger value="download">Download</TabsTrigger>
-					<TabsTrigger value="node">Node</TabsTrigger>
-					<TabsTrigger value="peers">Peers</TabsTrigger>
+					<TabsTrigger value="upload" className="border-b-0">
+						Upload
+					</TabsTrigger>
+					<TabsTrigger value="download" className="border-b-0">
+						Download
+					</TabsTrigger>
+					<TabsTrigger value="node" className="border-b-0">
+						Node
+					</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="upload" className="flex-auto mt-0 mb-0">

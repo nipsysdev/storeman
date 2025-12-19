@@ -1,3 +1,4 @@
+use codex_bindings::DebugInfo;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -16,20 +17,11 @@ impl Default for StorageConnectionStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NetworkInfo {
+pub struct NodeInfo {
     pub peer_id: Option<String>,
     pub version: Option<String>,
     pub repo_path: Option<String>,
-    pub connected_peers: u32,
-    pub max_peers: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StorageInfo {
-    pub used_bytes: u64,
-    pub total_bytes: u64,
-    pub available_bytes: u64,
-    pub block_count: u32,
+    pub debug_info: Option<DebugInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

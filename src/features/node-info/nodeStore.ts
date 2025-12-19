@@ -1,5 +1,4 @@
 import { atom } from "nanostores";
+import { NodeInfo } from "./nodeTypes";
 
-export const $nodePeerId = atom<string | null>(null);
-export const $nodeVersion = atom<string | null>(null);
-export const $nodeAddresses = atom<string[]>([]);
+export const $nodeInfo = atom<NodeInfo | null>(null);
