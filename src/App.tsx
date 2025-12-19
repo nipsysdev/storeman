@@ -64,7 +64,7 @@ function App() {
 				</TabsContent>
 			</Tabs>
 
-			<StorageConnectionDialog />
+			<ConnectionDialog />
 		</div>
 	);
 }

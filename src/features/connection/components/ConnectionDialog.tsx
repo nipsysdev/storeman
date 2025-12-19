@@ -21,7 +21,7 @@ import {
 	getConnectionStatusText,
 } from "../connectionUtils";
 
-export default function StorageConnectionDialog() {
+export default function ConnectionDialog() {
 	const isDialogOpened = useStore($isConnectionDialogOpened);
 	const connectionStatus = useStore($connectionStatus);
 	const connectionError = useStore($connectionError);
