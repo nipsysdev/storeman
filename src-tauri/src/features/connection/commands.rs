@@ -37,19 +37,19 @@ pub async fn get_storage_info(app_handle: AppHandle) -> Result<StorageInfo, Stri
 }
 
 #[tauri::command]
-pub async fn connect_to_storage(app_handle: AppHandle) -> Result<(), String> {
+pub async fn start_storage_node(app_handle: AppHandle) -> Result<(), String> {
     let manager = get_storage_manager_with_handle(Some(app_handle))
         .await
         .map_err(map_storage_error)?;
-    manager.connect().await.map_err(map_storage_error)
+    manager.start_node().await.map_err(map_storage_error)
 }
 
 #[tauri::command]
-pub async fn disconnect_from_storage(app_handle: AppHandle) -> Result<(), String> {
+pub async fn stop_storage_node(app_handle: AppHandle) -> Result<(), String> {
     let manager = get_storage_manager_with_handle(Some(app_handle))
         .await
         .map_err(map_storage_error)?;
-    manager.disconnect().await.map_err(map_storage_error)
+    manager.stop_node().await.map_err(map_storage_error)
 }
 
 #[tauri::command]

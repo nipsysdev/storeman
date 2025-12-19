@@ -47,15 +47,16 @@ impl StorageManager {
             })),
         };
 
+        manager.initialize_node().await?;
+
         if manager.config.auto_connect {
-            manager.connect().await?;
+            manager.start_node().await?;
         }
 
         Ok(manager)
     }
 
-    pub async fn connect(&self) -> Result<(), StorageError> {
-        // Update status to connecting
+    pub async fn initialize_node(&self) -> Result<(), StorageError> {
         {
             let mut status = self.status.write().await;
             *status = StorageConnectionStatus::Connecting;
@@ -67,25 +68,74 @@ impl StorageManager {
             *error = None;
         }
 
+        {
+            let node_guard = self.node.lock().await;
+            if node_guard.is_some() {
+                // Node already initialized, just update status
+                let mut status = self.status.write().await;
+                *status = StorageConnectionStatus::Initialized;
+                return Ok(());
+            }
+        }
+
         let storage_config = self.config.to_codex_config();
 
-        // Create and start the node
-        let mut node = match CodexNode::new(storage_config) {
+        let node = match CodexNode::new(storage_config) {
             Ok(node) => node,
             Err(e) => {
                 return Err(StorageError::NodeCreation(e.to_string()));
             }
         };
 
-        // Start the node
+        {
+            let mut node_guard = self.node.lock().await;
+            *node_guard = Some(node);
+        }
+
+        {
+            let mut status = self.status.write().await;
+            *status = StorageConnectionStatus::Initialized;
+        }
+
+        Ok(())
+    }
+
+    pub async fn start_node(&self) -> Result<(), StorageError> {
+        {
+            let mut status = self.status.write().await;
+            *status = StorageConnectionStatus::Connecting;
+        }
+
+        {
+            let mut error = self.error.write().await;
+            *error = None;
+        }
+
+        let mut node = {
+            let mut node_guard = self.node.lock().await;
+            match node_guard.take() {
+                Some(node) => node,
+                None => {
+                    // Node not initialized, initialize it first
+                    drop(node_guard);
+                    self.initialize_node().await?;
+                    let mut node_guard = self.node.lock().await;
+                    node_guard
+                        .take()
+                        .ok_or_else(|| StorageError::NodeNotInitialized)?
+                }
+            }
+        };
+
         match node.start() {
             Ok(_) => {}
             Err(e) => {
+                let mut node_guard = self.node.lock().await;
+                *node_guard = Some(node);
                 return Err(StorageError::NodeStart(e.to_string()));
             }
         }
 
-        // Store the node and update status
         {
             let mut node_guard = self.node.lock().await;
             *node_guard = Some(node);
@@ -102,14 +152,12 @@ impl StorageManager {
         Ok(())
     }
 
-    pub async fn disconnect(&self) -> Result<(), StorageError> {
-        // Update status to disconnected
+    pub async fn stop_node(&self) -> Result<(), StorageError> {
         {
             let mut status = self.status.write().await;
             *status = StorageConnectionStatus::Disconnected;
         }
 
-        // Stop and destroy the node
         {
             let node_option = {
                 let mut node_guard = self.node.lock().await;
@@ -120,14 +168,12 @@ impl StorageManager {
                 if let Err(e) = node.stop() {
                     eprintln!("Failed to stop node: {}", e);
                 }
-
-                if let Err(e) = node.destroy() {
-                    eprintln!("Failed to destroy node: {}", e);
-                }
+                // Put the stopped node back
+                let mut node_guard = self.node.lock().await;
+                *node_guard = Some(node);
             }
         }
 
-        // Clear network info
         {
             let mut network_info = self.network_info.write().await;
             network_info.peer_id = None;
@@ -136,7 +182,11 @@ impl StorageManager {
             network_info.connected_peers = 0;
         }
 
-        // Clear any errors
+        {
+            let mut status = self.status.write().await;
+            *status = StorageConnectionStatus::Initialized;
+        }
+
         {
             let mut error = self.error.write().await;
             *error = None;

@@ -18,6 +18,7 @@ import {
 import DownloadTab from "./features/download/components/DownloadTab";
 import UploadTab from "./features/upload/components/UploadTab";
 import "./App.css";
+import { getConnectionStatusText } from "./features/connection/connectionUtils";
 import NodeTab from "./features/node-info/components/NodeTab";
 import {
 	$nodeAddresses,
@@ -68,29 +69,10 @@ function App() {
 		return () => clearInterval(interval);
 	}, []);
 
-	const getStatusText = () => {
-		switch (connectionStatus) {
-			case ConnectionStatus.Connected:
-				return "Connected";
-			case ConnectionStatus.Connecting:
-				return "Connecting...";
-			case ConnectionStatus.Error:
-				return "Error";
-			case ConnectionStatus.Disconnected:
-			default:
-				return "Disconnected";
-		}
-	};
-
-	const getStatusColor = () => {
+	const getStatusColor = (): "primary" | "secondary" => {
 		switch (connectionStatus) {
 			case ConnectionStatus.Connected:
 				return "primary";
-			case ConnectionStatus.Connecting:
-				return "secondary";
-			case ConnectionStatus.Error:
-				return "secondary";
-			case ConnectionStatus.Disconnected:
 			default:
 				return "secondary";
 		}
@@ -107,7 +89,7 @@ function App() {
 				<div className="flex items-center space-x-4">
 					<Typography
 						variant="subtitle1"
-						color={getStatusColor() as any}
+						color={getStatusColor()}
 						className="cursor-pointer font-bold hover:opacity-80"
 						onClick={openConnectionDialog}
 						title={
@@ -115,7 +97,7 @@ function App() {
 							`Peer ID: ${nodePeerId || "N/A"}\nVersion: ${nodeVersion || "N/A"}`
 						}
 					>
-						{getStatusText()}
+						{getConnectionStatusText(connectionStatus)}
 					</Typography>
 				</div>
 			</header>
