@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { $connectionError, $connectionStatus, ConnectionStatus } from "./connectionStore";
+import { $connectionError, $connectionStatus } from "./connectionStore";
+import { ConnectionStatus } from "./connectionTypes";
 
 export async function connectToStorage() {
 	try {

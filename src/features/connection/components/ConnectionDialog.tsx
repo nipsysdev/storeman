@@ -14,8 +14,8 @@ import {
 	$connectionError,
 	$connectionStatus,
 	$isConnectionDialogOpened,
-	ConnectionStatus,
 } from "../connectionStore";
+import { ConnectionStatus } from "../connectionTypes";
 import {
 	getConnectionStatusDescription,
 	getConnectionStatusText,

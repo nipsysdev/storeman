@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { $connectionStatus, type ConnectionStatus } from "../connection/connectionStore";
+import { $connectionStatus } from "../connection/connectionStore";
+import type { ConnectionStatus } from "../connection/connectionTypes";
 import { $nodeInfo } from "./nodeStore";
 import type { NodeInfo } from "./nodeTypes";
 

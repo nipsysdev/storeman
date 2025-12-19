@@ -6,61 +6,21 @@ import {
 	TabsTrigger,
 	Typography,
 } from "@nipsysdev/lsd-react";
-import { useEffect } from "react";
 import StorageConnectionDialog from "./features/connection/components/ConnectionDialog";
 import {
 	$connectionStatus,
+	$isConnected,
 	$isConnectionDialogOpened,
-	ConnectionStatus,
 } from "./features/connection/connectionStore";
 import DownloadTab from "./features/download/components/DownloadTab";
 import UploadTab from "./features/upload/components/UploadTab";
 import "./App.css";
-import { connectToStorage } from "./features/connection/connectionService";
 import { getConnectionStatusText } from "./features/connection/connectionUtils";
 import NodeTab from "./features/node/components/NodeTab";
-import { updateNodeInfo, updateNodeStatus } from "./features/node/nodeService";
 
 function App() {
 	const connectionStatus = useStore($connectionStatus);
-
-	useEffect(() => {
-		updateNodeStatus().then((status) => {
-			if (
-				status === ConnectionStatus.Disconnected ||
-				status === ConnectionStatus.Initialized
-			) {
-				connectToStorage();
-				$isConnectionDialogOpened.set(true);
-			}
-		});
-
-		const nodePolling = async () => {
-			try {
-				await updateNodeStatus();
-				await updateNodeInfo();
-			} catch (error) {
-				console.error("Failed to update Storage status:", error);
-			}
-		};
-
-		nodePolling();
-		const interval = setInterval(nodePolling, 500);
-		return () => clearInterval(interval);
-	}, []);
-
-	const getStatusColor = (): "primary" | "secondary" => {
-		switch (connectionStatus) {
-			case ConnectionStatus.Connected:
-				return "primary";
-			default:
-				return "secondary";
-		}
-	};
-
-	const openConnectionDialog = () => {
-		$isConnectionDialogOpened.set(true);
-	};
+	const isConnected = useStore($isConnected);
 
 	return (
 		<div className="size-full flex flex-col bg-lsd-surface-primary pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -69,9 +29,9 @@ function App() {
 				<div className="flex items-center space-x-4">
 					<Typography
 						variant="subtitle1"
-						color={getStatusColor()}
+						color={isConnected ? "primary" : "secondary"}
 						className="cursor-pointer font-bold hover:opacity-80"
-						onClick={openConnectionDialog}
+						onClick={() => $isConnectionDialogOpened.set(true)}
 					>
 						{getConnectionStatusText(connectionStatus)}
 					</Typography>

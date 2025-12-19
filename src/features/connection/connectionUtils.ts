@@ -1,4 +1,4 @@
-import { ConnectionStatus } from "./connectionStore";
+import { ConnectionStatus } from "./connectionTypes";
 
 export function getConnectionStatusText(status: ConnectionStatus) {
     switch (status) {

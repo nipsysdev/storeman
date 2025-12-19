@@ -1,4 +1,4 @@
 import { atom } from "nanostores";
-import { NodeInfo } from "./nodeTypes";
+import type { NodeInfo } from "./nodeTypes";
 
 export const $nodeInfo = atom<NodeInfo | null>(null);

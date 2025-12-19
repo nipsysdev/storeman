@@ -5,7 +5,6 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
-	Separator,
 	Typography,
 } from "@nipsysdev/lsd-react";
 import { $nodeInfo } from "../nodeStore";
