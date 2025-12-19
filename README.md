@@ -1,6 +1,6 @@
-# StoreMan - A simple Logos Storage GUI node
+# storeman - A simple Logos Storage GUI node
 
-StoreMan is a Desktop & Android app for connecting, uploading and downloading files from Logos Storage.
+storeman is a Desktop & Android app for connecting, uploading and downloading files from Logos Storage.
 
 ## Getting Started
 

@@ -103,7 +103,7 @@ function App() {
 	return (
 		<div className="size-full flex flex-col bg-lsd-surface-primary pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
 			<header className="flex p-6 justify-between items-center">
-				<Typography variant="h3">λ | StoreMan</Typography>
+				<Typography variant="h3">λ | storeman</Typography>
 				<div className="flex items-center space-x-4">
 					<Typography
 						variant="subtitle1"
