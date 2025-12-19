@@ -18,11 +18,8 @@ import UploadTab from "./features/upload/components/UploadTab";
 import "./App.css";
 import { connectToStorage } from "./features/connection/connectionService";
 import { getConnectionStatusText } from "./features/connection/connectionUtils";
-import NodeTab from "./features/node-info/components/NodeTab";
-import {
-	updateNodeInfo,
-	updateNodeStatus,
-} from "./features/node-info/nodeService";
+import NodeTab from "./features/node/components/NodeTab";
+import { updateNodeInfo, updateNodeStatus } from "./features/node/nodeService";
 
 function App() {
 	const connectionStatus = useStore($connectionStatus);
