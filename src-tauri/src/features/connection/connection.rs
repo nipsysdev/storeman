@@ -7,7 +7,7 @@ use crate::features::shared::{NodeInfo, StorageConnectionStatus, StorageError};
 
 pub struct StorageManager {
     node: Arc<Mutex<Option<CodexNode>>>,
-    config: crate::features::connection::StoreManConfig,
+    config: codex_bindings::CodexConfig,
     status: Arc<RwLock<StorageConnectionStatus>>,
     progress_senders: Arc<
         Mutex<
@@ -20,9 +20,7 @@ pub struct StorageManager {
 }
 
 impl StorageManager {
-    pub async fn new(
-        config: crate::features::connection::StoreManConfig,
-    ) -> Result<Self, StorageError> {
+    pub async fn new(config: codex_bindings::CodexConfig) -> Result<Self, StorageError> {
         let manager = Self {
             node: Arc::new(Mutex::new(None)),
             config,
@@ -31,10 +29,6 @@ impl StorageManager {
         };
 
         manager.initialize_node().await?;
-
-        if manager.config.auto_connect {
-            manager.start_node().await?;
-        }
 
         Ok(manager)
     }
@@ -55,9 +49,7 @@ impl StorageManager {
             }
         }
 
-        let storage_config = self.config.to_codex_config();
-
-        let node = match CodexNode::new(storage_config) {
+        let node = match CodexNode::new(self.config.clone()) {
             Ok(node) => node,
             Err(e) => {
                 return Err(StorageError::NodeCreation(e.to_string()));
@@ -270,9 +262,11 @@ pub async fn get_storage_manager_with_handle(
         Ok(Arc::clone(manager))
     } else {
         let config = if let Some(handle) = app_handle {
-            crate::features::connection::StoreManConfig::with_app_handle(&handle)
+            crate::features::connection::create_codex_config(&handle)
         } else {
-            crate::features::connection::StoreManConfig::new()
+            return Err(StorageError::Configuration(
+                "App handle is required to create storage manager".to_string(),
+            ));
         };
         let manager = Arc::new(StorageManager::new(config).await?);
         STORAGE_MANAGER.set(manager.clone()).map_err(|_| {
